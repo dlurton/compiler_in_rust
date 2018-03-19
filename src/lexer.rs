@@ -72,41 +72,31 @@ impl <'a> Lexer<'a> {
     }
 
     fn read_literal_number(&mut self) -> Option<Token> {
-        match self.reader.peek() {
-            None => None,
-            Some(c) => {
-                if !is_digit(c) {
-                    None
-                } else {
-                    let mut buf = String::new();
-                    buf.push(c);
-                    self.reader.next();
-                    let start = self.reader.loc();
-                    while let Some(c) = self.reader.peek() {
-                        if !is_digit(c) {
-                            break;
-                        }
-                        buf.push(c);
-
-                        self.reader.next();
-                    }
-
-                    // For now we don't care too much about error handling.
-                    let maybe_int = buf.parse::<i32>();
-                    match maybe_int {
-                        Ok(i) => Some(Token::new(TokenKind::LiteralInt32(i), Span::new(start, self.reader.loc()))),
-                        Err(_e) => panic!("Crap, it wasn't an integer!")
-                    }
-                }
+        if let Some((text, span)) = self.read_token(|c| is_digit(c), |c| is_digit(c)) {
+            // For now we don't care too much about error handling.
+            let maybe_int = text.parse::<i32>();
+            match maybe_int {
+                Ok(i) => Some(Token::new(TokenKind::LiteralInt32(i), span)),
+                Err(_e) => panic!("Crap, it wasn't an integer!")
             }
+        } else {
+            None
         }
     }
 
     fn read_identifier(&mut self) -> Option<Token> {
+        if let Some((text, span)) = self.read_token(|c| is_letter(c), |c| is_letter(c) || is_digit(c)) {
+            Some(Token::new(TokenKind::Identifier(text), span))
+        } else {
+            None
+        }
+    }
+
+    fn read_token(&mut self, start_cond: fn(char)->bool, continue_cond: fn(char)->bool) -> Option<(String, Span)> {
         match self.reader.peek() {
             None => None,
             Some(c) => {
-                if !is_letter(c) {
+                if !start_cond(c) {
                     None
                 } else {
                     let mut buf = String::new();
@@ -114,14 +104,14 @@ impl <'a> Lexer<'a> {
                     self.reader.next();
                     let start = self.reader.loc();
                     while let Some(c) = self.reader.peek() {
-                        if !is_letter(c) && !is_digit(c) {
+                        if !continue_cond(c) {
                             break;
                         }
                         buf.push(c);
 
                         self.reader.next();
                     }
-                    Some(Token::new(TokenKind::Identifier(buf), Span::new(start, self.reader.loc())))
+                    Some((buf, Span::new(start, self.reader.loc())))
                 }
             }
         }
