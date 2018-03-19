@@ -2,8 +2,8 @@
 use std::str::Chars;
 
 use input::CharsReader;
-use input::Span;
-use input::Location;
+use source::Span;
+use source::Location;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenKind {

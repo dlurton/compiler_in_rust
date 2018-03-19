@@ -1,46 +1,9 @@
 
+use source::Location;
+
 use std::str::Chars;
 use std::fmt;
 use std::collections::VecDeque;
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Location {
-    /// The line of the location, starting at 1.
-    line: u32,
-    /// The byte offset from the start of the line, starting at 1.
-    col_offset: u32
-}
-
-impl Location {
-    pub fn start() -> Location {
-        Location { line: 1, col_offset: 1,  }
-    }
-
-    pub fn new(line: u32, col_offset: u32) -> Location {
-        Location { line, col_offset }
-    }
-
-    pub fn next(&self) -> Location {
-        Location { line: self.line, col_offset: self.col_offset + 1 }
-    }
-
-    pub fn next_line(&self) -> Location {
-        Location { line: self.line + 1, col_offset: 0 }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Span {
-    start: Location,
-    end: Location
-}
-
-impl Span {
-    pub fn new(start: Location, end: Location) -> Span {
-        Span { start, end }
-    }
-}
-
 
 pub struct CharsReader<'a> {
     is_at_eof: bool,
