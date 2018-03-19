@@ -8,7 +8,12 @@ use input::Location;
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenKind {
     LiteralInt32(i32),
-    Identifier(String)
+    Identifier(String),
+    OperatorAdd,
+    OperatorSub,
+    OperatorMul,
+    OperatorDiv,
+    OperatorMod,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -52,7 +57,9 @@ impl <'a> Lexer<'a> {
             None
         } else {
             self.eat_white();
-            if let Some(token) = self.read_literal_number() {
+            if let Some(token) = self.read_single_char_token() {
+                Some(token)
+            } else if let Some(token) = self.read_literal_number() {
                 Some(token)
             } else if let Some(token) = self.read_identifier() {
                 Some(token)
@@ -68,6 +75,24 @@ impl <'a> Lexer<'a> {
                 break;
             }
             self.reader.next();
+        }
+    }
+
+    fn read_single_char_token(&mut self) -> Option<Token> {
+        let kind = match self.reader.peek() {
+            Some('+') => Some(TokenKind::OperatorAdd),
+            Some('-') => Some(TokenKind::OperatorSub),
+            Some('*') => Some(TokenKind::OperatorMul),
+            Some('/') => Some(TokenKind::OperatorDiv),
+            Some('%') => Some(TokenKind::OperatorMod),
+            _ => None
+        };
+        match kind {
+            Some(kind) => {
+                self.reader.next();
+                Some(Token::new(kind, Span::new(self.reader.loc(), self.reader.loc())))
+            }
+            None => None
         }
     }
 
@@ -120,15 +145,24 @@ impl <'a> Lexer<'a> {
 
 #[cfg(test)]
 mod tests {
+    fn tok(kind: TokenKind, start_line: u32, start_col: u32, end_line: u32, end_col: u32) -> Token {
+        Token::new(kind, Span::new(Location::new(start_line, start_col), Location::new(end_line, end_col)))
+    }
     use super::*;
     #[test]
     fn lexer_test() {
-        let mut l = Lexer::new("  123  \n 456 \nabc\na123 ".chars());
+        let mut l = Lexer::new("  123  \n 456 \nabc\na123 \n+\n-\n*\n/\n%".chars());
 
-        assert_eq!(Token::new(TokenKind::LiteralInt32(123), Span::new(Location::new(1, 3), Location::new(1, 5))), l.next().unwrap());
-        assert_eq!(Token::new(TokenKind::LiteralInt32(456), Span::new(Location::new(2, 2), Location::new(2, 4))), l.next().unwrap());
-        assert_eq!(Token::new(TokenKind::Identifier(String::from("abc")), Span::new(Location::new(3, 1), Location::new(3, 3))), l.next().unwrap());
-        assert_eq!(Token::new(TokenKind::Identifier(String::from("a123")), Span::new(Location::new(4, 1), Location::new(4, 4))), l.next().unwrap());
+        assert_eq!(tok(TokenKind::LiteralInt32(123), 1, 3, 1, 5), l.next().unwrap());
+        assert_eq!(tok(TokenKind::LiteralInt32(456), 2, 2, 2, 4), l.next().unwrap());
+        assert_eq!(tok(TokenKind::Identifier(String::from("abc")), 3, 1, 3, 3), l.next().unwrap());
+        assert_eq!(tok(TokenKind::Identifier(String::from("a123")), 4, 1, 4, 4), l.next().unwrap());
+
+        assert_eq!(tok(TokenKind::OperatorAdd, 5, 1, 5, 1), l.next().unwrap());
+        assert_eq!(tok(TokenKind::OperatorSub, 6, 1, 6, 1), l.next().unwrap());
+        assert_eq!(tok(TokenKind::OperatorMul, 7, 1, 7, 1), l.next().unwrap());
+        assert_eq!(tok(TokenKind::OperatorDiv, 8, 1, 8, 1), l.next().unwrap());
+        assert_eq!(tok(TokenKind::OperatorMod, 9, 1, 9, 1), l.next().unwrap());
     }
 }
 
