@@ -7,7 +7,8 @@ use input::Location;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenKind {
-    LiteralInt32(i32)
+    LiteralInt32(i32),
+    Identifier(String)
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -33,6 +34,10 @@ fn is_digit(chr: char) -> bool {
     chr >= '0' && chr <= '9'
 }
 
+fn is_letter(chr: char) -> bool {
+    (chr >= 'a' && chr <= 'z') || (chr >= 'A' && chr <= 'Z')
+}
+
 pub struct Lexer<'a> {
     reader: CharsReader<'a>
 }
@@ -43,15 +48,17 @@ impl <'a> Lexer<'a> {
     }
 
     pub fn next(&mut self) -> Option<Token> {
-        if self.reader.has_more() {
+        if !self.reader.has_more() {
+            None
+        } else {
             self.eat_white();
             if let Some(token) = self.read_literal_number() {
                 Some(token)
+            } else if let Some(token) = self.read_identifier() {
+                Some(token)
             } else {
-                panic!("Invalid character!")
+                panic!("Invalid character: {:?}!", self.reader.peek())
             }
-        } else {
-            None
         }
     }
 
@@ -94,6 +101,31 @@ impl <'a> Lexer<'a> {
             }
         }
     }
+
+    fn read_identifier(&mut self) -> Option<Token> {
+        match self.reader.peek() {
+            None => None,
+            Some(c) => {
+                if !is_letter(c) {
+                    None
+                } else {
+                    let mut buf = String::new();
+                    buf.push(c);
+                    self.reader.next();
+                    let start = self.reader.loc();
+                    while let Some(c) = self.reader.peek() {
+                        if !is_letter(c) && !is_digit(c) {
+                            break;
+                        }
+                        buf.push(c);
+
+                        self.reader.next();
+                    }
+                    Some(Token::new(TokenKind::Identifier(buf), Span::new(start, self.reader.loc())))
+                }
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -101,10 +133,12 @@ mod tests {
     use super::*;
     #[test]
     fn lexer_test() {
-        let mut l = Lexer::new("  123  \n 456".chars());
+        let mut l = Lexer::new("  123  \n 456 \nabc\na123 ".chars());
 
         assert_eq!(Token::new(TokenKind::LiteralInt32(123), Span::new(Location::new(1, 3), Location::new(1, 5))), l.next().unwrap());
         assert_eq!(Token::new(TokenKind::LiteralInt32(456), Span::new(Location::new(2, 2), Location::new(2, 4))), l.next().unwrap());
+        assert_eq!(Token::new(TokenKind::Identifier(String::from("abc")), Span::new(Location::new(3, 1), Location::new(3, 3))), l.next().unwrap());
+        assert_eq!(Token::new(TokenKind::Identifier(String::from("a123")), Span::new(Location::new(4, 1), Location::new(4, 4))), l.next().unwrap());
     }
 }
 
