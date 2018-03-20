@@ -1,9 +1,8 @@
 
 use std::str::Chars;
-
+use std::collections::vec_deque::VecDeque;
 use input::CharsReader;
-use source::Span;
-use source::Location;
+use source::*;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenKind {
@@ -18,8 +17,8 @@ pub enum TokenKind {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {
-    kind: TokenKind,
-    span: Span
+    pub kind: TokenKind,
+    pub span: Span
 }
 
 impl Token {
@@ -44,19 +43,43 @@ fn is_letter(chr: char) -> bool {
 }
 
 pub struct Lexer<'a> {
-    reader: CharsReader<'a>
+    reader: CharsReader<'a>,
+    lookahead: VecDeque<Token>
 }
 
 impl <'a> Lexer<'a> {
     pub fn new(chars: Chars) -> Lexer {
-        return Lexer { reader: CharsReader::new(chars) }
+        return Lexer { reader: CharsReader::new(chars), lookahead: VecDeque::new() }
     }
 
     pub fn next(&mut self) -> Option<Token> {
+        self.prime(1);
+        self.lookahead.pop_front()
+    }
+
+    pub fn peek(&mut self) -> Option<Token> {
+        self.peek_n(0)
+    }
+
+    pub fn peek_n(&mut self, n: u32) -> Option<Token> {
+        self.prime(n + 1);
+        if n as usize >= self.lookahead.len() { None } else { Some(self.lookahead[n as usize].clone()) }
+    }
+    fn prime(&mut self, num_tokens: u32) {
+        while self.lookahead.len() < num_tokens as usize {
+            match self.read_next_token() {
+                None => break,
+                Some(token) => self.lookahead.push_back(token)
+            }
+        }
+    }
+
+    fn read_next_token(&mut self) -> Option<Token> {
+        //Note:  eat_white() gracefully handles EOF
+        self.eat_white();
         if !self.reader.has_more() {
             None
         } else {
-            self.eat_white();
             if let Some(token) = self.read_single_char_token() {
                 Some(token)
             } else if let Some(token) = self.read_literal_number() {

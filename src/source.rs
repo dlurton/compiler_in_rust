@@ -7,9 +7,9 @@
 #[derive(Debug, Clone, PartialEq)]
 pub struct Location {
     /// The line of the location, starting at 1.
-    line: u32,
+    pub line: u32,
     /// The byte offset from the start of the line, starting at 1.
-    col_offset: u32
+    pub col_offset: u32
 }
 
 impl Location {
@@ -37,8 +37,8 @@ impl Location {
 /// A span within a source file indicated by a starting Location and ending Location.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Span {
-    start: Location,
-    end: Location
+    pub start: Location,
+    pub end: Location
 }
 
 impl Span {

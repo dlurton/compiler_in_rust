@@ -4,7 +4,7 @@ mod input;
 mod lexer;
 mod value;
 mod ast;
-//mod parser;
+mod parser;
 mod evaluator;
 
 use lexer::Lexer;
