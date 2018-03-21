@@ -17,10 +17,12 @@ impl Location {
         Location { line: 1, col_offset: 1,  }
     }
 
+    #[cfg(test)]
     pub fn unknown() -> Location {
         Location::new(0, 0)
     }
 
+    #[cfg(test)]
     pub fn new(line: u32, col_offset: u32) -> Location {
         Location { line, col_offset }
     }
@@ -46,6 +48,7 @@ impl Span {
         Span { start, end }
     }
 
+    #[cfg(test)]
     pub fn unknown() -> Span {
         Span::new(Location::unknown(), Location::unknown())
     }

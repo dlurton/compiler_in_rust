@@ -36,6 +36,8 @@ impl PartialEq for Expr {
 }
 
 impl Expr {
+
+    #[cfg(test)]
     pub fn new(kind: ExprKind) -> Expr {
         Expr { kind, span: Span::unknown() }
     }

@@ -65,6 +65,7 @@ impl <'a> Lexer<'a> {
         self.prime(n + 1);
         if n as usize >= self.lookahead.len() { None } else { Some(self.lookahead[n as usize].clone()) }
     }
+
     fn prime(&mut self, num_tokens: u32) {
         while self.lookahead.len() < num_tokens as usize {
             match self.read_next_token() {

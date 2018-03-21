@@ -15,7 +15,7 @@ fn get_precedence(token_kind: &TokenKind) -> u32 {
         _ => 0
     }
 }
-struct Parser<'a> {
+pub struct Parser<'a> {
     lexer: Lexer<'a>
 }
 
