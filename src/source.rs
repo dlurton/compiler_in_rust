@@ -2,6 +2,7 @@
 /*
   This module contains types related to source code.
 */
+use std::fmt::*;
 
 /// A location within a source file (line & column).
 #[derive(Debug, Clone, PartialEq)]
@@ -37,7 +38,7 @@ impl Location {
 }
 
 /// A span within a source file indicated by a starting Location and ending Location.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Span {
     pub start: Location,
     pub end: Location
@@ -53,3 +54,10 @@ impl Span {
         Span::new(Location::unknown(), Location::unknown())
     }
 }
+
+impl Debug for Span {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        f.write_fmt(format_args!("({}, {}, {}, {})", self.start.line, self.start.col_offset, self.end.line, self.end.col_offset))
+    }
+}
+

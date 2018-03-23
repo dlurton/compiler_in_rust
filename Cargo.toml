@@ -3,4 +3,11 @@ name = "compiler_in_rust"
 version = "0.1.0"
 authors = ["dave"]
 
-[dependencies]
+[lib]
+name="compiler_in_rust_lib"
+path="src/lib.rs"
+
+[[bin]]
+name="compiler_in_rust"
+path="src/bin.rs"
+

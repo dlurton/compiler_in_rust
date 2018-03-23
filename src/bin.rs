@@ -5,7 +5,7 @@ extern crate compiler_in_rust_lib;
 use compiler_in_rust_lib::*;
 
 fn main() {
-    println!("Hello, enter an expression and I will evaluate it for you.  To exit, type 'exit'.");
+    println!("Hello, enter an expression and I will evaluate it for you.  To view ast, type '?' as the first character of your expression.  To exit, type 'exit'.");
 
     while {
         print!(">");
@@ -16,12 +16,17 @@ fn main() {
                 if bytes_read == 1 { // Only read newline
                     true
                 } else {
-                    match input[..].trim() {
-                        "exit" => false,
-                        input => {
-                            let result = execute(&input);
-                            println!("{:?}", result);
-                            true
+                    if input.starts_with("?") {
+                        println!("{:#?}", parse(&input[1..]));
+                        true
+                    } else {
+                        match input[..].trim() {
+                            "exit" => false,
+                            input => {
+                                let result = execute(&input);
+                                println!("{:?}", result);
+                                true
+                            }
                         }
                     }
                 }
