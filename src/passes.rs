@@ -34,10 +34,10 @@ pub fn resolve_indexes(expr: Expr, global_def: &EnvDef) -> Expr {
         })
 }
 
-pub fn evaluate(expr: &Expr, env: &Vec<Value>) -> Value {
+pub fn evaluate(expr: &Expr, env: &Env) -> Value {
     match expr.kind {
         ExprKind::Literal(ref v) => v.clone(),
-        ExprKind::VariableIndex(ref index) => match env.get(*index as usize) {
+        ExprKind::VariableIndex(ref index) => match env.get_by_index(*index) {
             Some(value) => (*value).clone(),
             None => panic!("Index {:?} was out of range?", index)
         },
@@ -65,8 +65,8 @@ mod tests {
     }
 
     fn eval(expr: &Expr) -> Value {
-        let emptyEnv = Vec::new();
-        evaluate(expr, &emptyEnv)
+        let empty = EnvDefBuilder::new().build().create_with_default_values();
+        evaluate(expr, &empty)
     }
 
     #[test]

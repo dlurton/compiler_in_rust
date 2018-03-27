@@ -12,11 +12,10 @@ use lexer::*;
 use parser::*;
 use passes::*;
 use value::*;
-use std::vec::*;
 
 pub fn execute(source: &str) -> Value {
-    let empty_env = Vec::new();
-    execute_with_globals(source, empty_env)
+    let empty_env = EnvDefBuilder::new().build().create_with_default_values();
+    execute_with_env(source, empty_env)
 }
 
 pub fn parse(source: &str) -> Expr {
@@ -25,7 +24,7 @@ pub fn parse(source: &str) -> Expr {
     parser.parse()
 }
 
-pub fn execute_with_globals(source: &str, global_env: Vec<Value>) -> Value {
+pub fn execute_with_env(source: &str, global_env: Env) -> Value {
     let ast = parse(source);
     let result = evaluate(&ast, &global_env);
     return result;

@@ -53,6 +53,8 @@ impl <'a> Parser<'a> {
                 // maybe we can get some of those cool compiler errors?
                 TokenKind::LiteralInt32(value) =>
                     Expr::new_with_span(ExprKind::Literal(Value::Int32(value)), token.span),
+                TokenKind::Identifier(text) =>
+                    Expr::new_with_span(ExprKind::VariableRef(text), token.span),
                 _ => panic!("Invalid prefix expression term!")
             }
         }
@@ -135,4 +137,9 @@ mod tests {
             parse("1+2*3")
         )
     }
+    #[test]
+    pub fn parse_identifier() {
+        assert_eq!(Expr::new(ExprKind::VariableRef(String::from("abc"))), parse("abc"));
+    }
+
 }
