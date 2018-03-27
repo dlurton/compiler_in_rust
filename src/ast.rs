@@ -54,13 +54,6 @@ impl PartialEq for Expr {
     }
 }
 
-/*
-#[derive(Debug, Clone, PartialEq)]
-pub enum DataType {
-    Int32
-}
-*/
-
 /// A definitition of an environment.
 #[derive(Debug, Clone)]
 pub struct EnvDef {
@@ -124,13 +117,6 @@ impl EnvDefBuilder {
     pub fn new() -> EnvDefBuilder {
         EnvDefBuilder { fields: HashMap::new() }
     }
-    /*
-    pub fn with_item(mut self, name: &str, data_type: DataType) -> EnvDefBuilder {
-        let ordinal = self.indexes.len() as u32;
-        self.indexes.insert(String::from(name), EnvField { name: String::from(name), data_type: data_type, ordinal: ordinal });
-        self
-    }
-     */
 
     pub fn with_item(mut self, name: &str, default_value: Value) -> EnvDefBuilder {
         let ordinal = self.fields.len() as u32;
@@ -147,18 +133,6 @@ impl EnvDefBuilder {
 mod tests {
     use super::*;
 
-    /*#[test]
-    fn env_def_bulider_test() {
-
-        let builder = EnvDefBuilder::new();
-        let env_def = builder
-            .with_item("foo", DataType::Int32)
-            .with_item("bar", DataType::Int32)
-            .build();
-
-        assert_eq!(Some(&EnvField { name:String::from("foo"), data_type: DataType::Int32, ordinal: 0 }), env_def.find("foo"));
-        assert_eq!(Some(&EnvField { name:String::from("bar"), data_type: DataType::Int32, ordinal: 1 }), env_def.find("bar"));
-    }*/
     #[test]
     fn env_def_bulider_test() {
 

@@ -18,7 +18,7 @@ fn recurse_clone(expr: &Expr, node_handler: &Fn(&Expr) -> Option<Expr>) -> Expr 
     }
 }
 
-pub fn resolve_indexes(expr: Expr, global_def: &EnvDef) -> Expr {
+pub fn resolve_variables(expr: Expr, global_def: &EnvDef) -> Expr {
     recurse_clone(
         &expr,
         &|expr: &Expr| {

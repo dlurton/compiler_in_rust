@@ -14,8 +14,8 @@ use passes::*;
 use value::*;
 
 pub fn execute(source: &str) -> Value {
-    let empty_env = EnvDefBuilder::new().build().create_with_default_values();
-    execute_with_env(source, empty_env)
+    let empty_env = EnvDefBuilder::new().build();
+    execute_with_globals(source, &empty_env)
 }
 
 pub fn parse(source: &str) -> Expr {
@@ -24,9 +24,13 @@ pub fn parse(source: &str) -> Expr {
     parser.parse()
 }
 
-pub fn execute_with_env(source: &str, global_env: Env) -> Value {
+pub fn execute_with_globals(source: &str, global_env_def: &EnvDef) -> Value {
     let ast = parse(source);
+    let ast = resolve_variables(ast, &global_env_def);
+
+    let global_env = global_env_def.create_with_default_values();
     let result = evaluate(&ast, &global_env);
+
     return result;
 }
 
