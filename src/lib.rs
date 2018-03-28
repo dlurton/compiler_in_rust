@@ -6,12 +6,14 @@ pub mod value;
 pub mod ast;
 pub mod parser;
 pub mod passes;
+pub mod error;
 
 use ast::*;
 use lexer::*;
 use parser::*;
 use passes::*;
 use value::*;
+use error::*;
 
 pub fn execute(source: &str) -> Value {
     let empty_env = EnvDefBuilder::new().build();
@@ -20,7 +22,8 @@ pub fn execute(source: &str) -> Value {
 
 pub fn parse(source: &str) -> Expr {
     let lexer = Lexer::new(source.chars());
-    let mut parser = Parser::new(lexer);
+    let err_stream = ErrorStream::new(&mut std::io::stdout());
+    let mut parser = Parser::new(lexer, err_stream);
     parser.parse()
 }
 

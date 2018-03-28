@@ -3,6 +3,7 @@ use source::*;
 use lexer::*;
 use value::*;
 use ast::*;
+use error::*;
 
 // http://en.cppreference.com/w/cpp/language/operator_precedence
 
@@ -16,20 +17,20 @@ fn get_precedence(token_kind: &TokenKind) -> u32 {
     }
 }
 pub struct Parser<'a> {
-    lexer: Lexer<'a>
+    lexer: Lexer<'a>,
+    err_stream: ErrorStream<'a>
 }
 
 impl <'a> Parser<'a> {
-    pub fn new(lexer: Lexer) -> Parser {
-        Parser { lexer }
+    pub fn new(lexer: Lexer<'a>, err_stream: ErrorStream<'a>) -> Parser<'a> {
+        Parser { lexer: lexer, err_stream: err_stream }
     }
-
  
     pub fn parse(&mut self) -> Expr {
         self.parse_expr(0)
     }
 
-    fn parse_expr(&mut self, precedence: u32) -> Expr {
+    fn parse_expr(&mut self, precedence: u32) -> Option<Expr> {
 
         let mut expr = self.parse_prefix();
 
@@ -40,12 +41,14 @@ impl <'a> Parser<'a> {
                 break;
             }
 
-            expr = self.parse_infix(expr, next_precedence);
+            if let Some(e) = self.parse_infix(expr, next_precedence) {
+                expr = e;
+            }
         }
         expr
     }
 
-    fn parse_prefix(&mut self) -> Expr {
+    fn parse_prefix(&mut self) -> Option<Expr> {
         match self.lexer.next() {
             None => panic!("Unexpected end of tokens!"),
             Some(token) => match token.kind {
@@ -60,9 +63,10 @@ impl <'a> Parser<'a> {
         }
     }
 
-    fn parse_infix(&mut self, left: Expr, precedence: u32) -> Expr {
+    /// Sends an error to err_stream and returns None in case of error.
+    fn parse_infix(&mut self, left: Expr, precedence: u32) -> Option<Expr> {
         match self.lexer.next() {
-            None => panic!("Unexpected end of tokens!"),
+            None => None,
             Some(token) => {
                 // TODO: make Operator a token kind, introduce enum OperatorKind?
                 // maybe we can get some of those cool compiler errors?
@@ -72,11 +76,18 @@ impl <'a> Parser<'a> {
                     TokenKind::OperatorMul => BinaryOp::Mul,
                     TokenKind::OperatorDiv => BinaryOp::Div,
                     TokenKind::OperatorMod => BinaryOp::Mod,
-                    _ => panic!("Invalid binary operator!")
+                    _ => {
+                        self.err_stream.error_with_span(token.span, format!("Expected a binary operator"));
+                        return None
+                    }
                 };
-                let right = self.parse_expr(precedence);
-                let span = Span::new(left.span.start.clone(), right.span.end.clone());
-                Expr::new_with_span(ExprKind::Binary(binary_op, Box::new(left), Box::new(right)), span)
+
+                if let Some(right) = self.parse_expr(precedence) {
+                    let span = Span::new(left.span.start.clone(), right.span.end.clone());
+                    Expr::new_with_span(ExprKind::Binary(binary_op, Box::new(left), Box::new(right)), span);
+                } else {
+                    None
+                }
             }
         }
     }

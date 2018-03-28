@@ -37,6 +37,12 @@ impl Location {
     }
 }
 
+impl Display for Location {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        write!(f, "{}, {}", self.line, self.col_offset)
+    }
+}
+
 /// A span within a source file indicated by a starting Location and ending Location.
 #[derive(Clone, PartialEq)]
 pub struct Span {
