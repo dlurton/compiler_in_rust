@@ -27,6 +27,7 @@ pub type LexerError = SourceError<LexerErrorKind>;
 pub enum TokenKind {
     LiteralInt32(i32),
     Identifier(String),
+    //TODO: nested enum here?
     OperatorAdd,
     OperatorSub,
     OperatorMul,

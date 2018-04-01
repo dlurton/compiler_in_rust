@@ -6,7 +6,6 @@ use ast::*;
 use error::*;
 
 // http://en.cppreference.com/w/cpp/language/operator_precedence
-
 // https://keepcalmandlearnrust.com/2016/08/pratt-parser-in-rust/
 
 fn get_precedence(token_kind: &TokenKind) -> u32 {
@@ -36,13 +35,12 @@ impl ErrorKind for ParseErrorKind {
     }
 }
 
+pub type ParseError = SourceError<ParseErrorKind>;
+pub type ParseResult = Result<Expr, ParseError>;
+
 fn lex_to_parse_error(lex_err: LexerError) -> ParseError {
     ParseError::new_with_span(ParseErrorKind::LexerError(lex_err.kind), lex_err.span)
 }
-
-
-pub type ParseError = SourceError<ParseErrorKind>;
-pub type ParseResult = Result<Expr, ParseError>;
 
 pub struct Parser<'a> {
     lexer: Lexer<'a>,
@@ -90,12 +88,8 @@ impl <'a> Parser<'a> {
 
             LexResult::Ok(token) =>
                 match token.kind {
-                    // TODO: make Literal a token kind, introduce enum LiteralKind
-                    // maybe we can get some of those cool compiler errors?
-                    TokenKind::LiteralInt32(value) =>
-                        Ok(Expr::new_with_span(ExprKind::Literal(Value::Int32(value)), token.span)),
-                    TokenKind::Identifier(text) =>
-                        Ok(Expr::new_with_span(ExprKind::VariableRef(text), token.span)),
+                    TokenKind::LiteralInt32(value) => Ok(Expr::new_literal_with_span(Value::Int32(value), token.span)),
+                    TokenKind::Identifier(text) => Ok(Expr::new_variable_ref_with_span(text, token.span)),
                     _ => Err(ParseError::new_with_span(ParseErrorKind::InvalidPrefixExpressionTerm(token.kind), token.span))
                 }
         }
@@ -131,7 +125,13 @@ impl <'a> Parser<'a> {
                     Err(_) => parse_result,
                     Ok(right) => {
                         let span = Span::new(left.span.start.clone(), right.span.end.clone());
-                        Ok(Expr::new_with_span(ExprKind::Binary(binary_op, Box::new(left), Box::new(right)), span))
+                        Ok(Expr::new_with_span(
+                            ExprKind::Binary {
+                                op: binary_op,
+                                left: Box::new(left),
+                                right: Box::new(right)
+                            },
+                            span))
                     },
                 }
             }
@@ -151,18 +151,17 @@ mod tests {
 
     #[test]
     pub fn parse_literals() {
-        assert_eq!(Expr::new(ExprKind::Literal(Value::Int32(1))), parse("1"));
-        assert_eq!(Expr::new(ExprKind::Literal(Value::Int32(123))), parse("  123  "));
+        assert_eq!(Expr::new_literal(Value::Int32(1)), parse("1"));
+        assert_eq!(Expr::new_literal(Value::Int32(123)), parse("  123  "));
     }
 
     #[test]
     pub fn parse_literal_binary_add() {
         assert_eq!(
-            Expr::new(
-                ExprKind::Binary(
-                    BinaryOp::Add,
-                    Box::new(Expr::new(ExprKind::Literal(Value::Int32(1)))),
-                    Box::new(Expr::new(ExprKind::Literal(Value::Int32(1)))))),
+            Expr::new_binary(
+                BinaryOp::Add,
+                Expr::new_literal(Value::Int32(1)),
+                Expr::new_literal(Value::Int32(1))),
             parse("1+1")
         )
     }
@@ -170,33 +169,30 @@ mod tests {
     #[test]
     pub fn parse_literal_binary_mul() {
         assert_eq!(
-            Expr::new(
-                ExprKind::Binary(
+                Expr::new_binary(
                     BinaryOp::Mul,
-                    Box::new(Expr::new(ExprKind::Literal(Value::Int32(1)))),
-                    Box::new(Expr::new(ExprKind::Literal(Value::Int32(1)))))),
-            parse("1*1")
-        )
+                    Expr::new_literal(Value::Int32(1)),
+                    Expr::new_literal(Value::Int32(1)),
+                ),
+            parse("1*1"))
     }
 
     #[test]
     pub fn parse_literal_binary_add_mul() {
         assert_eq!(
-            Expr::new(
-                ExprKind::Binary(
-                    BinaryOp::Add,
-                    Box::new(Expr::new(ExprKind::Literal(Value::Int32(1)))),
-                    Box::new(Expr::new(
-                        ExprKind::Binary(
-                            BinaryOp::Mul,
-                            Box::new(Expr::new(ExprKind::Literal(Value::Int32(2)))),
-                            Box::new(Expr::new(ExprKind::Literal(Value::Int32(3))))))))),
+            Expr::new_binary(
+                BinaryOp::Add,
+                Expr::new_literal(Value::Int32(1)),
+                Expr::new_binary(
+                    BinaryOp::Mul,
+                    Expr::new_literal(Value::Int32(2)),
+                    Expr::new_literal(Value::Int32(3)))),
             parse("1+2*3")
         )
     }
     #[test]
     pub fn parse_identifier() {
-        assert_eq!(Expr::new(ExprKind::VariableRef(String::from("abc"))), parse("abc"));
+        assert_eq!(Expr::new(ExprKind::VariableRef { name: String::from("abc") }), parse("abc"));
     }
 
 }

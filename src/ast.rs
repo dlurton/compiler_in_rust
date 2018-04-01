@@ -16,10 +16,10 @@ pub enum BinaryOp {
 //TODO experiment with struct enum variants here
 #[derive(Debug, PartialEq, Clone)]
 pub enum ExprKind {
-    Literal(Value),
-    Binary(BinaryOp, Box<Expr>, Box<Expr>),
-    VariableRef(String),
-    VariableIndex(u32)
+    Literal{ value: Value },
+    Binary{ op: BinaryOp, left: Box<Expr>, right: Box<Expr> },
+    VariableRef { name: String },
+    VariableIndex { index: u32 }
 }
 
 #[derive(Debug, Clone)]
@@ -32,6 +32,42 @@ impl Expr {
     #[cfg(test)]
     pub fn new(kind: ExprKind) -> Expr {
         Expr { kind, span: Span::unknown() }
+    }
+
+    #[cfg(test)]
+    pub fn new_literal(value: Value) -> Expr {
+        Expr::new_literal_with_span(value, Span::unknown())
+    }
+    pub fn new_literal_with_span(value: Value, span: Span) -> Expr {
+        Expr::new_with_span(ExprKind::Literal { value }, span)
+    }
+
+    #[cfg(test)]
+    pub fn new_binary(op: BinaryOp, left: Expr, right: Expr) -> Expr {
+        Expr::new_binary_with_span(op, left, right, Span::unknown())
+    }
+    pub fn new_binary_with_span(op: BinaryOp, left: Expr, right: Expr, span: Span) -> Expr {
+        Expr::new_with_span(ExprKind::Binary {
+            op: op,
+            left: Box::new(left),
+            right: Box::new(right)
+        }, span)
+    }
+
+    #[cfg(test)]
+    pub fn new_variable_ref(name: String, span: Span) -> Expr {
+        Expr::new_variable_ref_with_span(name, span)
+    }
+    pub fn new_variable_ref_with_span(name: String, span: Span) -> Expr {
+        Expr::new_with_span(ExprKind::VariableRef { name }, span)
+    }
+
+    #[cfg(test)]
+    pub fn new_variable_index(index: u32) -> Expr {
+        Expr::new_variable_index_with_span(index, Span::unknown())
+    }
+    pub fn new_variable_index_with_span(index: u32 , span: Span) -> Expr {
+        Expr::new_with_span(ExprKind::VariableIndex{ index }, span)
     }
 
     pub fn new_with_span(kind: ExprKind, span: Span) -> Expr {
