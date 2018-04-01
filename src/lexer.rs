@@ -28,7 +28,7 @@ pub type LexerError = SourceError<LexerErrorKind>;
 pub enum TokenKind {
     LiteralInt32(i32),
     Identifier(String),
-    // The existence of BinaryOp and BinaryOperator would make it difficult to support
+    // The existence of BinaryOp here would make it difficult to support
     // operators that may be either unary or n-ary depending on context.  Good thing I don't like
     // context sensitivity.
     BinaryOperator(BinaryOp),

@@ -3,7 +3,7 @@ extern crate compiler_in_rust_lib;
 
 use compiler_in_rust_lib::*;
 use compiler_in_rust_lib::value::*;
-use compiler_in_rust_lib::ast::*;
+use compiler_in_rust_lib::env::*;
 
 #[test]
 fn simple_expression_1() {

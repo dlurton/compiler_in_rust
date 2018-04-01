@@ -1,5 +1,6 @@
 
 
+//Used by lexer and parser
 #[derive(Debug, PartialEq, Clone)]
 pub enum BinaryOp {
     Add,
@@ -8,5 +9,4 @@ pub enum BinaryOp {
     Div,
     Mod
 }
-
 

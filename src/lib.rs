@@ -7,14 +7,15 @@ pub mod ast;
 pub mod parser;
 pub mod passes;
 pub mod error;
+pub mod env;
 pub mod common;
 
-use ast::*;
 use lexer::*;
 use parser::*;
 use passes::*;
 use value::*;
 use error::*;
+use env::*;
 
 pub fn execute(source: &str) -> ExecuteResult {
     let empty_env = EnvDefBuilder::new().build();

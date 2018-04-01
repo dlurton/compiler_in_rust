@@ -2,7 +2,8 @@
 use ast::*;
 use value::*;
 use error::*;
-use common::*; 
+use common::*;
+use env::*; 
 //pub fn get_evaluator(globals: Env)
 
 // TODO:  don't put all possible transformation pass error codes here.
