@@ -36,6 +36,11 @@ impl ErrorKind for ParseErrorKind {
     }
 }
 
+fn lex_to_parse_error(lex_err: LexerError) -> ParseError {
+    ParseError::new_with_span(ParseErrorKind::LexerError(lex_err.kind), lex_err.span)
+}
+
+
 pub type ParseError = SourceError<ParseErrorKind>;
 pub type ParseResult = Result<Expr, ParseError>;
 
@@ -76,8 +81,7 @@ impl <'a> Parser<'a> {
 
     fn parse_prefix(&mut self) -> ParseResult {
         match self.lexer.next() {
-            LexResult::Err(lex_err) => Err(
-                ParseError::new_with_span(ParseErrorKind::LexerError(lex_err.kind()), lex_err.span())),
+            LexResult::Err(lex_err) => Err(lex_to_parse_error(lex_err)),
 
             LexResult::EndOfInput(last_location) => Err(
                 ParseError::new_with_location(
@@ -99,8 +103,7 @@ impl <'a> Parser<'a> {
 
     fn parse_infix(&mut self, left: Expr, precedence: u32) -> ParseResult {
         match self.lexer.next() {
-            LexResult::Err(lex_err) => Err(
-                ParseError::new_with_span(ParseErrorKind::LexerError(lex_err.kind()), lex_err.span())),
+            LexResult::Err(lex_err) => Err(lex_to_parse_error(lex_err)),
 
             LexResult::EndOfInput(last_location) => Err(
                 ParseError::new_with_location(
@@ -123,12 +126,13 @@ impl <'a> Parser<'a> {
                                 token.span))
                 };
 
-                match self.parse_expr(precedence) {
+                let parse_result = self.parse_expr(precedence);
+                match parse_result {
+                    Err(_) => parse_result,
                     Ok(right) => {
                         let span = Span::new(left.span.start.clone(), right.span.end.clone());
                         Ok(Expr::new_with_span(ExprKind::Binary(binary_op, Box::new(left), Box::new(right)), span))
                     },
-                    Err(parse_error) => Err(parse_error) //TODO:  this feels redundant is there a smoother way?
                 }
             }
         }

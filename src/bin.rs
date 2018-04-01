@@ -21,7 +21,7 @@ fn main() {
 
                         match parse(&input[1..]) {
                             Ok(expr) => println!("{:#?}", expr),
-                            Err(e) => println!("Error: {}", e.kind().message())
+                            Err(e) => println!("Error: {}", e.kind.message())
                         }
                         true
                     } else {
@@ -30,7 +30,7 @@ fn main() {
                             input => {
                                 let result = execute(&input);
                                 match result {
-                                    Err(e) => println!("Error: {}", e.kind().message()),
+                                    Err(e) => println!("Error: {}", e.kind.message()),
                                     Ok(v) => println!("Result: {:?}", v)
                                 }
                                 true

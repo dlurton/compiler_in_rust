@@ -13,6 +13,7 @@ pub enum BinaryOp {
     Mod
 }
 
+//TODO experiment with struct enum variants here
 #[derive(Debug, PartialEq, Clone)]
 pub enum ExprKind {
     Literal(Value),
@@ -33,10 +34,6 @@ impl Expr {
         Expr { kind, span: Span::unknown() }
     }
 
-    pub fn get_span(&self) -> Span {
-        //TODO: try accessing the poperty directlyc
-        self.span
-    }
     pub fn new_with_span(kind: ExprKind, span: Span) -> Expr {
         Expr { kind, span }
     }
@@ -75,8 +72,7 @@ impl EnvDef {
         fields.sort_by(|a, b| a.ordinal.cmp(&b.ordinal));
         let values = fields.iter().map(|f| f.default_value.clone()).collect();
 
-        //TODO:  make this not clone for every environment instance!
-        Env::new((*self).clone(), values)
+        Env::new(self, values)
     }
 }
 
@@ -89,14 +85,16 @@ pub struct EnvField {
     pub default_value: Value
 }
 
-pub struct Env {
-    def: EnvDef,
+//TODO: this doesn't really belong in ast.rs since it is more of a runtime thing.  Move to value.rs?
+pub struct Env<'a> {
+    def: &'a EnvDef,
     values: Vec<Value>
 }
 
-impl Env {
-    fn new(def: EnvDef, values: Vec<Value>) -> Env {
-        Env { def, values }
+impl <'a> Env<'a> {
+
+    fn new(def: &'a EnvDef, values: Vec<Value>) -> Env<'a> {
+        Env::<'a> { def, values }
     }
 
     pub fn get_by_index(&self, index: u32) -> Option<&Value> {

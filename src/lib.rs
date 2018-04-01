@@ -54,15 +54,15 @@ pub fn execute_with_globals(source: &str, global_env_def: &EnvDef) -> ExecuteRes
                     let global_env = global_env_def.create_with_default_values();
                     match evaluate(&ast, &global_env) {
                         Ok(value) => Ok(value),
-                        Err(err) => Err(ExecuteError::new_with_span(ExecuteErrorKind::Evaluate(err.kind()), err.span()))
+                        Err(err) => Err(ExecuteError::new_with_span(ExecuteErrorKind::Evaluate(err.kind), err.span))
                     }
                 },
                 Err(pass_err) => {
-                    Err(ExecuteError::new_with_span(ExecuteErrorKind::Pass(pass_err.kind()), pass_err.span()))
+                    Err(ExecuteError::new_with_span(ExecuteErrorKind::Pass(pass_err.kind), pass_err.span))
                 }
             },
         Err(parse_error) => {
-            Err(ExecuteError::new_with_span(ExecuteErrorKind::Parse(parse_error.kind()), parse_error.span()))
+            Err(ExecuteError::new_with_span(ExecuteErrorKind::Parse(parse_error.kind), parse_error.span))
         }
    }
 

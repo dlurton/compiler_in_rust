@@ -109,7 +109,7 @@ pub fn evaluate(expr: &Expr, env: &Env) -> EvaluateResult {
             Some(value) => Ok((*value).clone()),
             None => Err(EvaluateError::new_with_span(
                 EvaluateErrorKind::IndexOutOfRange(*index),
-                expr.get_span())
+                expr.span)
             )
         },
         //This case indicates that the `resolve_variables` pass was not executed against `expr`
@@ -146,7 +146,8 @@ mod tests {
     }
 
     fn eval(expr: &Expr) -> Value {
-        let empty = EnvDefBuilder::new().build().create_with_default_values();
+        let env = EnvDefBuilder::new().build();
+        let empty = env.create_with_default_values();
         evaluate(expr, &empty).unwrap()
     } 
 

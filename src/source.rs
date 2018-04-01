@@ -44,8 +44,6 @@ impl Display for Location {
 }
 
 /// A span within a source file indicated by a starting Location and ending Location.
-//TODO: I don't like Copy so much because the compiler will silently use it in some
-//circumstances in lieu of a move--am I being overconservative about preventing copies?
 #[derive(Clone, Copy, PartialEq)]
 pub struct Span {
     pub start: Location,
