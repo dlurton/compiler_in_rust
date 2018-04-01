@@ -1,49 +1,130 @@
 
 use ast::*;
 use value::*;
+use error::*;
+//pub fn get_evaluator(globals: Env)
 
-//pub fn get_evaluator(globals: Env) f
+// TODO:  don't put all possible transformation pass error codes here.
+// Would be nicer to keep error codes from each pass distinct.
 
-fn recurse_clone(expr: &Expr, node_handler: &Fn(&Expr) -> Option<Expr>) -> Expr {
+#[derive(Debug, Clone, PartialEq)]
+pub enum PassErrorKind {
+    VariableDoesNotExist(String)
+}
+
+impl ErrorKind for PassErrorKind {
+    fn message(&self) -> String {
+        match self {
+            &PassErrorKind::VariableDoesNotExist(ref name) => format!("Variable '{}' does not exist", name)
+        }
+    }
+}
+
+type PassError = SourceError<PassErrorKind>;
+pub type PassResult = Result<Expr, PassError>;
+
+fn recurse_clone(expr: &Expr, node_handler: &Fn(&Expr) -> Option<PassResult>) -> PassResult {
     match node_handler(expr) {
         Some(e) => e,
         None => match &expr.kind {
-            &ExprKind::Literal(_) | &ExprKind::VariableRef(_) | &ExprKind::VariableIndex(_) => (*expr).clone(),
+            &ExprKind::Literal(_) | &ExprKind::VariableRef(_) | &ExprKind::VariableIndex(_) => Ok((*expr).clone()),
             &ExprKind::Binary(ref op, ref left, ref right) => {
-                let new_left = recurse_clone(left, node_handler);
-                let new_right = recurse_clone(right, node_handler);
-                expr.clone_with(ExprKind::Binary((*op).clone(), Box::new(new_left), Box::new(new_right)))
+                let result = recurse_clone(left, node_handler);
+                let new_left = match result {
+                    Err(e) => return Err(e),
+                    Ok(expr) => expr
+                };
+
+                let result = recurse_clone(right, node_handler);
+                let new_right = match result {
+                    Err(e) => return Err(e),
+                    Ok(expr) => expr
+                }; 
+
+                Ok(expr.clone_with(ExprKind::Binary(
+                    (*op).clone(),
+                    Box::new(new_left),
+                    Box::new(new_right))))
+
+
+                /*let new_right = recurse_clone(right, node_handler);
+                match recurse_clone(left, node_handler) {
+                    Err(e) => Err(e), //Redundant?  Smoother way to accomplish this?
+                    Ok(new_left) =>
+                        match recurse_clone(right, node_handler) {
+                            Err(e) => Err(e), //Redundant, etc?
+                            Ok(new_right) =>
+                                Ok(expr.clone_with(ExprKind::Binary(
+                                    (*op).clone(),
+                                    Box::new(new_left),
+                                    Box::new(new_right))))
+                        }
+                }
+                */
             }
         }
     }
 }
 
-pub fn resolve_variables(expr: Expr, global_def: &EnvDef) -> Expr {
+pub fn resolve_variables(expr: Expr, global_def: &EnvDef) -> PassResult {
     recurse_clone(
         &expr,
         &|expr: &Expr| {
-            match expr.kind {
-                ExprKind::VariableRef(ref name) => {
+            let kind = &expr.kind;
+            match kind {
+                &ExprKind::VariableRef(ref name) =>
                     Some(match global_def.find(&name[..]) {
-                        Some(field) => expr.clone_with(ExprKind::VariableIndex(field.ordinal)),
-                        None => panic!("Variable {:?} does not exist.", name)
-                    })
-                }
+                        Some(field) => Ok(expr.clone_with(ExprKind::VariableIndex(field.ordinal))),
+                        None => Err(
+                            PassError::new_with_span(
+                                PassErrorKind::VariableDoesNotExist(name.clone()),
+                                expr.span.clone()))
+                    }),
                 _ => None
             }
         })
 }
 
-pub fn evaluate(expr: &Expr, env: &Env) -> Value {
+#[derive(Debug, Clone, PartialEq)]
+pub enum EvaluateErrorKind {
+    IndexOutOfRange(u32)
+}
+
+impl ErrorKind for EvaluateErrorKind {
+    fn message(&self) -> String {
+        match self {
+            &EvaluateErrorKind::IndexOutOfRange(index) => format!("Index {} was out of range.", index)
+        }
+    }
+}
+
+pub type EvaluateError = SourceError<EvaluateErrorKind>;
+pub type EvaluateResult = Result<Value, EvaluateError>;
+
+
+pub fn evaluate(expr: &Expr, env: &Env) -> EvaluateResult {
     match expr.kind {
-        ExprKind::Literal(ref v) => v.clone(),
+        ExprKind::Literal(ref v) => Ok(v.clone()),
         ExprKind::VariableIndex(ref index) => match env.get_by_index(*index) {
-            Some(value) => (*value).clone(),
-            None => panic!("Index {:?} was out of range?", index)
+            Some(value) => Ok((*value).clone()),
+            None => Err(EvaluateError::new_with_span(
+                EvaluateErrorKind::IndexOutOfRange(*index),
+                expr.get_span())
+            )
         },
+        //This case indicates that the `resolve_variables` pass was not executed against `expr`
         ExprKind::VariableRef(ref name) => panic!("Unresolved variable reference: {:?}", name),
         ExprKind::Binary(ref op, ref left, ref right) => {
-            match (op, evaluate(&left, env), evaluate(&right, env)) {
+            let left_value = match evaluate(&left, env) {
+                Err(e) => return Err(e),
+                Ok(value) => value
+            };
+            let right_value = match evaluate(&right, env) {
+                Err(e) => return Err(e),
+                Ok(value) => value
+            };
+
+            Ok(match (op, left_value, right_value) {
                 (&BinaryOp::Add, Value::Int32(l), Value::Int32(r)) => Value::Int32(l + r),
                 (&BinaryOp::Sub, Value::Int32(l), Value::Int32(r)) => Value::Int32(l - r),
                 (&BinaryOp::Mul, Value::Int32(l), Value::Int32(r)) => Value::Int32(l * r),
@@ -51,12 +132,12 @@ pub fn evaluate(expr: &Expr, env: &Env) -> Value {
                 (&BinaryOp::Mod, Value::Int32(l), Value::Int32(r)) => Value::Int32(l % r),
 
                 (_, Value::Tuple(_), _) | (_, _, Value::Tuple(_)) => panic!("Cannot perform binary operations on tuples"),
-            }
+            })
         }
     }
 }
 
-#[cfg(test)] 
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -66,8 +147,8 @@ mod tests {
 
     fn eval(expr: &Expr) -> Value {
         let empty = EnvDefBuilder::new().build().create_with_default_values();
-        evaluate(expr, &empty)
-    }
+        evaluate(expr, &empty).unwrap()
+    } 
 
     #[test]
     fn test_add() {

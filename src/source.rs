@@ -5,7 +5,7 @@
 use std::fmt::*;
 
 /// A location within a source file (line & column).
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Location {
     /// The line of the location, starting at 1.
     pub line: u32,
@@ -37,8 +37,16 @@ impl Location {
     }
 }
 
+impl Display for Location {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        write!(f, "{}, {}", self.line, self.col_offset)
+    }
+}
+
 /// A span within a source file indicated by a starting Location and ending Location.
-#[derive(Clone, PartialEq)]
+//TODO: I don't like Copy so much because the compiler will silently use it in some
+//circumstances in lieu of a move--am I being overconservative about preventing copies?
+#[derive(Clone, Copy, PartialEq)]
 pub struct Span {
     pub start: Location,
     pub end: Location
@@ -47,6 +55,10 @@ pub struct Span {
 impl Span {
     pub fn new(start: Location, end: Location) -> Span {
         Span { start, end }
+    }
+
+    pub fn from_location(loc: Location) -> Span {
+        Span { start: loc.clone(), end: loc }
     }
 
     #[cfg(test)]

@@ -33,6 +33,10 @@ impl Expr {
         Expr { kind, span: Span::unknown() }
     }
 
+    pub fn get_span(&self) -> Span {
+        //TODO: try accessing the poperty directlyc
+        self.span
+    }
     pub fn new_with_span(kind: ExprKind, span: Span) -> Expr {
         Expr { kind, span }
     }
