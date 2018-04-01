@@ -3,6 +3,7 @@ use std::io::Write;
 
 extern crate compiler_in_rust_lib;
 use compiler_in_rust_lib::*;
+use error::*; 
 
 fn main() {
     println!("Hello, enter an expression and I will evaluate it for you.  To view ast, type '?' as the first character of your expression.  To exit, type 'exit'.");
@@ -17,14 +18,21 @@ fn main() {
                     true
                 } else {
                     if input.starts_with("?") {
-                        println!("{:#?}", parse(&input[1..]));
+
+                        match parse(&input[1..]) {
+                            Ok(expr) => println!("{:#?}", expr),
+                            Err(e) => println!("Error: {}", e.kind().message())
+                        }
                         true
                     } else {
                         match input[..].trim() {
                             "exit" => false,
                             input => {
                                 let result = execute(&input);
-                                println!("{:?}", result);
+                                match result {
+                                    Err(e) => println!("Error: {}", e.kind().message()),
+                                    Ok(v) => println!("Result: {:?}", v)
+                                }
                                 true
                             }
                         }

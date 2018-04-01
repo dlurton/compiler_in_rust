@@ -7,17 +7,17 @@ use compiler_in_rust_lib::ast::*;
 
 #[test]
 fn simple_expression_1() {
-   assert_eq!(Value::Int32(2), execute("1 + 1"))
+   assert_eq!(Ok(Value::Int32(2)), execute("1 + 1"))
 }
 
 #[test]
 fn simple_expression_2() {
-    assert_eq!(Value::Int32(4), execute("2 * 2"))
+    assert_eq!(Ok(Value::Int32(4)), execute("2 * 2"))
 }
 
 #[test]
 fn simple_expression_3() {
-    assert_eq!(Value::Int32(5), execute("2 * 2 + 1"))
+    assert_eq!(Ok(Value::Int32(5)), execute("2 * 2 + 1"))
 }
 
 #[test]
@@ -28,6 +28,6 @@ fn expression_with_env() {
         .with_item("bar", Value::Int32(200))
         .build();
 
-    assert_eq!(Value::Int32(300), execute_with_globals("foo + bar", &env_def));
+    assert_eq!(Ok(Value::Int32(300)), execute_with_globals("foo + bar", &env_def));
 }
 

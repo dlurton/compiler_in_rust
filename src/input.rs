@@ -20,7 +20,7 @@ impl <'a> CharsReader<'a> {
     pub fn loc(&self) -> Location {
         match self.loc {
             None => panic!("Must call .next() before taking the current location."),
-            Some(ref l) => l.clone() 
+            Some(ref l) => l.clone()
         }
     }
 

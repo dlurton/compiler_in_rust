@@ -15,25 +15,56 @@ use passes::*;
 use value::*;
 use error::*;
 
-pub fn execute(source: &str) -> Value {
+pub fn execute(source: &str) -> ExecuteResult {
     let empty_env = EnvDefBuilder::new().build();
     execute_with_globals(source, &empty_env)
 }
 
-pub fn parse(source: &str) -> Expr {
+pub fn parse(source: &str) -> ParseResult {
     let lexer = Lexer::new(source.chars());
-    let err_stream = ErrorStream::new(&mut std::io::stdout());
-    let mut parser = Parser::new(lexer, err_stream);
+    let mut parser = Parser::new(lexer);
     parser.parse()
 }
 
-pub fn execute_with_globals(source: &str, global_env_def: &EnvDef) -> Value {
-    let ast = parse(source);
-    let ast = resolve_variables(ast, &global_env_def);
+#[derive(Debug, Clone, PartialEq)]
+pub enum ExecuteErrorKind {
+    Parse(ParseErrorKind),
+    Pass(PassErrorKind),
+    Evaluate(EvaluateErrorKind)
+}
 
-    let global_env = global_env_def.create_with_default_values();
-    let result = evaluate(&ast, &global_env);
+impl ErrorKind for ExecuteErrorKind {
+    fn message(&self) -> String {
+        match self {
+            &ExecuteErrorKind::Parse(ref kind) => kind.message(),
+            &ExecuteErrorKind::Evaluate(ref kind) => kind.message(),
+            &ExecuteErrorKind::Pass(ref kind) => kind.message()
+        }
+    }
+}
 
-    return result;
+pub type ExecuteError = SourceError<ExecuteErrorKind>;
+pub type ExecuteResult = Result<Value, ExecuteError>;
+
+pub fn execute_with_globals(source: &str, global_env_def: &EnvDef) -> ExecuteResult {
+    match parse(source) {
+        Ok(ast) =>
+            match resolve_variables(ast, &global_env_def) {
+                Ok(ast) => {
+                    let global_env = global_env_def.create_with_default_values();
+                    match evaluate(&ast, &global_env) {
+                        Ok(value) => Ok(value),
+                        Err(err) => Err(ExecuteError::new_with_span(ExecuteErrorKind::Evaluate(err.kind()), err.span()))
+                    }
+                },
+                Err(pass_err) => {
+                    Err(ExecuteError::new_with_span(ExecuteErrorKind::Pass(pass_err.kind()), pass_err.span()))
+                }
+            },
+        Err(parse_error) => {
+            Err(ExecuteError::new_with_span(ExecuteErrorKind::Parse(parse_error.kind()), parse_error.span()))
+        }
+   }
+
 }
 

@@ -1,8 +1,27 @@
 
 use std::str::Chars;
 use std::collections::vec_deque::VecDeque;
+use std::fmt;
 use input::CharsReader;
 use source::*;
+use error::*;
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum LexerErrorKind {
+    InvalidCharacter(char),
+    InvalidInteger(String)
+}
+
+impl ErrorKind for LexerErrorKind {
+    fn message(&self) -> String {
+        match self {
+            &LexerErrorKind::InvalidInteger(ref text) => format!("Invalid integer: '{}'", text),
+            &LexerErrorKind::InvalidCharacter(ref chr) => format!("Invalid character: '{}'", chr),
+        }
+    }
+}
+
+pub type LexerError = SourceError<LexerErrorKind>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenKind {
@@ -13,6 +32,27 @@ pub enum TokenKind {
     OperatorMul,
     OperatorDiv,
     OperatorMod,
+}
+
+impl fmt::Display for TokenKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            &TokenKind::LiteralInt32(ref n) => write!(f, "literal integer {}", n),
+            &TokenKind::Identifier(ref text) => write!(f, "identifier \"{}\"", text),
+            &TokenKind::OperatorAdd => write!(f, "operator +"),
+            &TokenKind::OperatorSub => write!(f, "operator -"),
+            &TokenKind::OperatorMul => write!(f, "operator *"),
+            &TokenKind::OperatorDiv => write!(f, "operator /"),
+            &TokenKind::OperatorMod => write!(f, "operator %"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum LexResult {
+    Ok(Token),
+    EndOfInput(Location),
+    Err(LexerError),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -26,6 +66,7 @@ impl Token {
         Token { kind, span }
     }
 }
+
 
 fn is_white(chr: char) -> bool {
     match chr {
@@ -44,51 +85,60 @@ fn is_letter(chr: char) -> bool {
 
 pub struct Lexer<'a> {
     reader: CharsReader<'a>,
-    lookahead: VecDeque<Token>
+    lookahead: VecDeque<LexResult>,
 }
 
 impl <'a> Lexer<'a> {
-    pub fn new(chars: Chars) -> Lexer {
-        return Lexer { reader: CharsReader::new(chars), lookahead: VecDeque::new() }
+    pub fn new(chars: Chars<'a>) -> Lexer<'a> {
+        return Lexer {
+            reader: CharsReader::new(chars),
+            lookahead: VecDeque::new(),
+        }
     }
 
-    pub fn next(&mut self) -> Option<Token> {
+    pub fn next(&mut self) -> LexResult {
         self.prime(1);
-        self.lookahead.pop_front()
+
+        //Note: pop_front() shouldn't ever return None after call to self.prime(1)
+        self.lookahead.pop_front().unwrap()
     }
 
-    pub fn peek(&mut self) -> Option<Token> {
+    pub fn peek(&mut self) -> LexResult {
         self.peek_n(0)
     }
 
-    pub fn peek_n(&mut self, n: u32) -> Option<Token> {
+    pub fn peek_n(&mut self, n: u32) -> LexResult {
         self.prime(n + 1);
-        if n as usize >= self.lookahead.len() { None } else { Some(self.lookahead[n as usize].clone()) }
+        self.lookahead[n as usize].clone() 
     }
 
     fn prime(&mut self, num_tokens: u32) {
         while self.lookahead.len() < num_tokens as usize {
-            match self.read_next_token() {
-                None => break,
-                Some(token) => self.lookahead.push_back(token)
-            }
+            let token = self.read_next_token();
+            self.lookahead.push_back(token)
         }
     }
 
-    fn read_next_token(&mut self) -> Option<Token> {
+    /// Stuffs a LexResult into the lookahead.
+    /// If the end of input has been reached, stuffs a LexResult::EndOfInput.
+    fn read_next_token(&mut self) -> LexResult {
         //Note:  eat_white() gracefully handles EOF
         self.eat_white();
         if !self.reader.has_more() {
-            None
+            LexResult::EndOfInput(self.reader.loc())
         } else {
             if let Some(token) = self.read_single_char_token() {
-                Some(token)
+                LexResult::Ok(token)
             } else if let Some(token) = self.read_literal_number() {
-                Some(token)
+                LexResult::Ok(token)
             } else if let Some(token) = self.read_identifier() {
-                Some(token)
+                LexResult::Ok(token)
             } else {
-                panic!("Invalid character: {:?}!", self.reader.peek())
+                //Note:  if self.reader.has_more() then self.reader.next() shouldn't ever return None.
+                LexResult::Err(
+                    LexerError::new_with_location(
+                        LexerErrorKind::InvalidCharacter(self.reader.next().unwrap()),
+                        self.reader.loc())) 
             }
         }
     }
@@ -169,24 +219,24 @@ impl <'a> Lexer<'a> {
 
 #[cfg(test)]
 mod tests {
-    fn tok(kind: TokenKind, start_line: u32, start_col: u32, end_line: u32, end_col: u32) -> Token {
-        Token::new(kind, Span::new(Location::new(start_line, start_col), Location::new(end_line, end_col)))
+    fn tok(kind: TokenKind, start_line: u32, start_col: u32, end_line: u32, end_col: u32) -> LexResult {
+        LexResult::Ok(Token::new(kind, Span::new(Location::new(start_line, start_col), Location::new(end_line, end_col))))
     }
     use super::*;
     #[test]
     fn lexer_test() {
         let mut l = Lexer::new("  123  \n 456 \nabc\na123 \n+\n-\n*\n/\n%".chars());
 
-        assert_eq!(tok(TokenKind::LiteralInt32(123), 1, 3, 1, 5), l.next().unwrap());
-        assert_eq!(tok(TokenKind::LiteralInt32(456), 2, 2, 2, 4), l.next().unwrap());
-        assert_eq!(tok(TokenKind::Identifier(String::from("abc")), 3, 1, 3, 3), l.next().unwrap());
-        assert_eq!(tok(TokenKind::Identifier(String::from("a123")), 4, 1, 4, 4), l.next().unwrap());
+        assert_eq!(tok(TokenKind::LiteralInt32(123), 1, 3, 1, 5), l.next());
+        assert_eq!(tok(TokenKind::LiteralInt32(456), 2, 2, 2, 4), l.next());
+        assert_eq!(tok(TokenKind::Identifier(String::from("abc")), 3, 1, 3, 3), l.next());
+        assert_eq!(tok(TokenKind::Identifier(String::from("a123")), 4, 1, 4, 4), l.next());
 
-        assert_eq!(tok(TokenKind::OperatorAdd, 5, 1, 5, 1), l.next().unwrap());
-        assert_eq!(tok(TokenKind::OperatorSub, 6, 1, 6, 1), l.next().unwrap());
-        assert_eq!(tok(TokenKind::OperatorMul, 7, 1, 7, 1), l.next().unwrap());
-        assert_eq!(tok(TokenKind::OperatorDiv, 8, 1, 8, 1), l.next().unwrap());
-        assert_eq!(tok(TokenKind::OperatorMod, 9, 1, 9, 1), l.next().unwrap());
+        assert_eq!(tok(TokenKind::OperatorAdd, 5, 1, 5, 1), l.next());
+        assert_eq!(tok(TokenKind::OperatorSub, 6, 1, 6, 1), l.next());
+        assert_eq!(tok(TokenKind::OperatorMul, 7, 1, 7, 1), l.next());
+        assert_eq!(tok(TokenKind::OperatorDiv, 8, 1, 8, 1), l.next());
+        assert_eq!(tok(TokenKind::OperatorMod, 9, 1, 9, 1), l.next());
     }
 }
 

@@ -1,22 +1,40 @@
 
-use std::io::Write;
-
+//use std::io::Write;
+use std::fmt;
+use std::cmp;
+use std::clone;
 use source::*;
 
-pub struct ErrorStream<'a> {
-    writable: &'a mut Write,
-    pub error_count: u32
+pub trait ErrorKind : fmt::Debug + cmp::PartialEq + clone::Clone {
+    fn message(&self) -> String;
 }
 
-impl <'a> ErrorStream<'a> {
-    pub fn new(writable: &mut Write) -> ErrorStream {
-        ErrorStream { writable, error_count: 0 }
+#[derive(Debug, Clone, PartialEq)]
+pub struct SourceError<TErrorKind: ErrorKind> {
+    kind: TErrorKind,
+    span: Span,
+}
+
+impl <TErrorKind: ErrorKind> SourceError<TErrorKind> {
+
+    pub fn new_with_span(kind: TErrorKind, span: Span) -> SourceError<TErrorKind> {
+        SourceError::<TErrorKind> { kind, span }
     }
 
-    pub fn error_with_span(&mut self, span: Span, message: String) {
-        self.error_count += 1;
-        self.writable.write_fmt(format_args!("{}: {}", span.start, message))
-            .expect("Writing to error stream failed?");
+    pub fn new_with_location(kind: TErrorKind, loc: Location) -> SourceError<TErrorKind> {
+        SourceError::<TErrorKind> { kind: kind, span: Span::from_location(loc) }
+    }
+
+    pub fn kind(&self) -> TErrorKind {
+        //TODO Do I really need to clone here?
+        //Consider removing this method and accessing the field directly.
+        self.kind.clone() 
+    }
+    pub fn span(&self) -> Span {
+        self.span
+    }
+    pub fn message(&self) -> String {
+        self.kind.message()
     }
 }
 
