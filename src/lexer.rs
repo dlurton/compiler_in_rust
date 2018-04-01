@@ -5,6 +5,7 @@ use std::fmt;
 use input::CharsReader;
 use source::*;
 use error::*;
+use common::*;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum LexerErrorKind {
@@ -27,12 +28,10 @@ pub type LexerError = SourceError<LexerErrorKind>;
 pub enum TokenKind {
     LiteralInt32(i32),
     Identifier(String),
-    //TODO: nested enum here?
-    OperatorAdd,
-    OperatorSub,
-    OperatorMul,
-    OperatorDiv,
-    OperatorMod,
+    // The existence of BinaryOp and BinaryOperator would make it difficult to support
+    // operators that may be either unary or n-ary depending on context.  Good thing I don't like
+    // context sensitivity.
+    BinaryOperator(BinaryOp),
 }
 
 impl fmt::Display for TokenKind {
@@ -40,11 +39,13 @@ impl fmt::Display for TokenKind {
         match self {
             &TokenKind::LiteralInt32(ref n) => write!(f, "literal integer {}", n),
             &TokenKind::Identifier(ref text) => write!(f, "identifier \"{}\"", text),
-            &TokenKind::OperatorAdd => write!(f, "operator +"),
-            &TokenKind::OperatorSub => write!(f, "operator -"),
-            &TokenKind::OperatorMul => write!(f, "operator *"),
-            &TokenKind::OperatorDiv => write!(f, "operator /"),
-            &TokenKind::OperatorMod => write!(f, "operator %"),
+            &TokenKind::BinaryOperator(ref op) => match op {
+                &BinaryOp::Add => write!(f, "operator +"),
+                &BinaryOp::Sub => write!(f, "operator -"),
+                &BinaryOp::Mul => write!(f, "operator *"),
+                &BinaryOp::Div => write!(f, "operator /"),
+                &BinaryOp::Mod => write!(f, "operator %"),
+            }
         }
     }
 }
@@ -155,11 +156,11 @@ impl <'a> Lexer<'a> {
 
     fn read_single_char_token(&mut self) -> Option<Token> {
         let kind = match self.reader.peek() {
-            Some('+') => Some(TokenKind::OperatorAdd),
-            Some('-') => Some(TokenKind::OperatorSub),
-            Some('*') => Some(TokenKind::OperatorMul),
-            Some('/') => Some(TokenKind::OperatorDiv),
-            Some('%') => Some(TokenKind::OperatorMod),
+            Some('+') => Some(TokenKind::BinaryOperator(BinaryOp::Add)),
+            Some('-') => Some(TokenKind::BinaryOperator(BinaryOp::Sub)),
+            Some('*') => Some(TokenKind::BinaryOperator(BinaryOp::Mul)),
+            Some('/') => Some(TokenKind::BinaryOperator(BinaryOp::Div)),
+            Some('%') => Some(TokenKind::BinaryOperator(BinaryOp::Mod)),
             _ => None
         };
         match kind {
@@ -233,11 +234,11 @@ mod tests {
         assert_eq!(tok(TokenKind::Identifier(String::from("abc")), 3, 1, 3, 3), l.next());
         assert_eq!(tok(TokenKind::Identifier(String::from("a123")), 4, 1, 4, 4), l.next());
 
-        assert_eq!(tok(TokenKind::OperatorAdd, 5, 1, 5, 1), l.next());
-        assert_eq!(tok(TokenKind::OperatorSub, 6, 1, 6, 1), l.next());
-        assert_eq!(tok(TokenKind::OperatorMul, 7, 1, 7, 1), l.next());
-        assert_eq!(tok(TokenKind::OperatorDiv, 8, 1, 8, 1), l.next());
-        assert_eq!(tok(TokenKind::OperatorMod, 9, 1, 9, 1), l.next());
+        assert_eq!(tok(TokenKind::BinaryOperator(BinaryOp::Add), 5, 1, 5, 1), l.next());
+        assert_eq!(tok(TokenKind::BinaryOperator(BinaryOp::Sub), 6, 1, 6, 1), l.next());
+        assert_eq!(tok(TokenKind::BinaryOperator(BinaryOp::Mul), 7, 1, 7, 1), l.next());
+        assert_eq!(tok(TokenKind::BinaryOperator(BinaryOp::Div), 8, 1, 8, 1), l.next());
+        assert_eq!(tok(TokenKind::BinaryOperator(BinaryOp::Mod), 9, 1, 9, 1), l.next());
     }
 }
 

@@ -7,6 +7,7 @@ pub mod ast;
 pub mod parser;
 pub mod passes;
 pub mod error;
+pub mod common;
 
 use ast::*;
 use lexer::*;

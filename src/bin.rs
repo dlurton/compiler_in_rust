@@ -3,7 +3,7 @@ use std::io::Write;
 
 extern crate compiler_in_rust_lib;
 use compiler_in_rust_lib::*;
-use error::*; 
+use error::*;
 
 fn main() {
     println!("Hello, enter an expression and I will evaluate it for you.  To view ast, type '?' as the first character of your expression.  To exit, type 'exit'.");

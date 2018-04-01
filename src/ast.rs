@@ -3,15 +3,7 @@ use source::Span;
 use value::Value;
 use std::vec::*;
 use std::collections::HashMap;
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum BinaryOp {
-    Add,
-    Sub,
-    Mul,
-    Div,
-    Mod
-}
+use common::*;
 
 //TODO experiment with struct enum variants here
 #[derive(Debug, PartialEq, Clone)]

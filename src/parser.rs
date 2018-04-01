@@ -4,15 +4,20 @@ use lexer::*;
 use value::*;
 use ast::*;
 use error::*;
+use common::*;
 
 // http://en.cppreference.com/w/cpp/language/operator_precedence
 // https://keepcalmandlearnrust.com/2016/08/pratt-parser-in-rust/
 
 fn get_precedence(token_kind: &TokenKind) -> u32 {
-    match token_kind {
-        &TokenKind::OperatorAdd | &TokenKind::OperatorSub => 10,
-        &TokenKind::OperatorMul | &TokenKind::OperatorDiv => 20,
-        _ => 0
+    if let &TokenKind::BinaryOperator(ref kind) = token_kind {
+        match kind  {
+            &BinaryOp::Add | &BinaryOp::Sub => 10,
+            &BinaryOp::Mul | &BinaryOp::Div => 20,
+            _ => 0
+        }
+    } else {
+        0
     }
 }
 
@@ -50,7 +55,7 @@ impl <'a> Parser<'a> {
     pub fn new(lexer: Lexer<'a>) -> Parser<'a> {
         Parser { lexer: lexer }
     }
- 
+
     pub fn parse(&mut self) -> ParseResult {
         self.parse_expr(0)
     }
@@ -108,16 +113,8 @@ impl <'a> Parser<'a> {
                 // TODO: make Operator a token kind, introduce enum OperatorKind?
                 // maybe we can get some of those cool compiler errors?
                 let binary_op = match token.kind {
-                    TokenKind::OperatorAdd => BinaryOp::Add,
-                    TokenKind::OperatorSub => BinaryOp::Sub,
-                    TokenKind::OperatorMul => BinaryOp::Mul,
-                    TokenKind::OperatorDiv => BinaryOp::Div,
-                    TokenKind::OperatorMod => BinaryOp::Mod,
-                    _ => return
-                        Err(
-                            ParseError::new_with_span(
-                                ParseErrorKind::ExpectedBinaryOperator(token.kind),
-                                token.span))
+                    TokenKind::BinaryOperator(op) => op,
+                    _ => return Err(ParseError::new_with_span(ParseErrorKind::ExpectedBinaryOperator(token.kind), token.span))
                 };
 
                 let parse_result = self.parse_expr(precedence);
