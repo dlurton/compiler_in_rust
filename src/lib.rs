@@ -17,6 +17,9 @@ use value::*;
 use error::*;
 use env::*;
 
+use passes::resolve_variables::*;
+use passes::evaluate::*;
+
 pub fn execute(source: &str) -> ExecuteResult {
     let empty_env = EnvDefBuilder::new().build();
     execute_with_globals(source, &empty_env)

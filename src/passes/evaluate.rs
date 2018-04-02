@@ -1,80 +1,7 @@
 
 use ast::*;
-use value::*;
-use error::*;
-use common::*;
-use env::*; 
-//pub fn get_evaluator(globals: Env)
+use super::*;
 
-// TODO:  don't put all possible transformation pass error codes here.
-// Would be nicer to keep error codes from each pass distinct.
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum PassErrorKind {
-    VariableDoesNotExist(String)
-}
-
-impl ErrorKind for PassErrorKind {
-    fn message(&self) -> String {
-        match self {
-            &PassErrorKind::VariableDoesNotExist(ref name) => format!("Variable '{}' does not exist", name)
-        }
-    }
-}
-
-type PassError = SourceError<PassErrorKind>;
-pub type PassResult = Result<Expr, PassError>;
-
-fn recurse_clone(expr: &Expr, node_handler: &Fn(&Expr) -> Option<PassResult>) -> PassResult {
-    match node_handler(expr) {
-        Some(e) => e,
-        None => match &expr.kind {
-            &ExprKind::Literal{ value: _ } |
-            &ExprKind::VariableRef { name: _ } |
-            &ExprKind::VariableIndex { index: _ }
-            => Ok((*expr).clone()),
-
-            &ExprKind::Binary { ref op, ref left, ref right } => {
-                let result = recurse_clone(left, node_handler);
-                let new_left = match result {
-                    Err(e) => return Err(e),
-                    Ok(expr) => expr
-                };
-
-                let result = recurse_clone(right, node_handler);
-                let new_right = match result {
-                    Err(e) => return Err(e),
-                    Ok(expr) => expr
-                }; 
-
-                Ok(expr.clone_with(ExprKind::Binary {
-                    op: (*op).clone(),
-                    left: Box::new(new_left),
-                    right: Box::new(new_right)
-                }))
-            }
-        }
-    }
-}
-
-pub fn resolve_variables(expr: Expr, global_def: &EnvDef) -> PassResult {
-    recurse_clone(
-        &expr,
-        &|expr: &Expr| {
-            let kind = &expr.kind;
-            match kind {
-                &ExprKind::VariableRef { ref name } =>
-                    Some(match global_def.find(&name[..]) {
-                        Some(field) => Ok(Expr::new_variable_index_with_span(field.ordinal, expr.span)),
-                        None => Err(
-                            PassError::new_with_span(
-                                PassErrorKind::VariableDoesNotExist(name.clone()),
-                                expr.span.clone()))
-                    }),
-                _ => None
-            }
-        })
-}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum EvaluateErrorKind {
@@ -91,7 +18,6 @@ impl ErrorKind for EvaluateErrorKind {
 
 pub type EvaluateError = SourceError<EvaluateErrorKind>;
 pub type EvaluateResult = Result<Value, EvaluateError>;
-
 
 pub fn evaluate(expr: &Expr, env: &Env) -> EvaluateResult {
     match expr.kind {
@@ -121,8 +47,6 @@ pub fn evaluate(expr: &Expr, env: &Env) -> EvaluateResult {
                 (&BinaryOp::Mul, Value::Int32(l), Value::Int32(r)) => Value::Int32(l * r),
                 (&BinaryOp::Div, Value::Int32(l), Value::Int32(r)) => Value::Int32(l / r),
                 (&BinaryOp::Mod, Value::Int32(l), Value::Int32(r)) => Value::Int32(l % r),
-
-                (_, Value::Tuple(_), _) | (_, _, Value::Tuple(_)) => panic!("Cannot perform binary operations on tuples"),
             })
         }
     }

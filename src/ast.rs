@@ -3,7 +3,6 @@ use source::Span;
 use value::Value;
 use common::*;
 
-//TODO experiment with struct enum variants here
 #[derive(Debug, PartialEq, Clone)]
 pub enum ExprKind {
     Literal{ value: Value },

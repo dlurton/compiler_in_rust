@@ -110,8 +110,6 @@ impl <'a> Parser<'a> {
                     last_location)),
 
             LexResult::Ok(token) => {
-                // TODO: make Operator a token kind, introduce enum OperatorKind?
-                // maybe we can get some of those cool compiler errors?
                 let binary_op = match token.kind {
                     TokenKind::BinaryOperator(op) => op,
                     _ => return Err(ParseError::new_with_span(ParseErrorKind::ExpectedBinaryOperator(token.kind), token.span))
