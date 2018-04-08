@@ -51,17 +51,17 @@ pub struct Span {
 }
 
 impl Span {
-    pub fn new(start: Location, end: Location) -> Span {
-        Span { start, end }
-    }
-
     pub fn from_location(loc: Location) -> Span {
         Span { start: loc.clone(), end: loc }
     }
 
+    pub fn from_locations(start: Location, end: Location) -> Span {
+        Span { start, end }
+    }
+
     #[cfg(test)]
     pub fn unknown() -> Span {
-        Span::new(Location::unknown(), Location::unknown())
+        Span::from_locations(Location::unknown(), Location::unknown())
     }
 }
 

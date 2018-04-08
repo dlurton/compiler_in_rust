@@ -31,3 +31,16 @@ fn expression_with_env() {
     assert_eq!(Ok(Value::Int32(300)), execute_with_globals("foo + bar", &env_def));
 }
 
+#[test]
+fn compount_expr() {
+    //The resulting value is always the last expression in a compound expression.
+
+    //Expressions "1", "2", "3"
+    assert_eq!(Ok(Value::Int32(3)), execute("1 2 3"));
+    //Expressions "1", "2", "3 * 4"
+    assert_eq!(Ok(Value::Int32(12)), execute("1 2 3 * 4"));
+    //Expressions "1", "2 * 4", "3"
+    assert_eq!(Ok(Value::Int32(3)), execute("1 2 * 4 3"));
+    //Expressions "1 * 4", "2", "3"
+    assert_eq!(Ok(Value::Int32(3)), execute("1 * 4 2 3"));
+}

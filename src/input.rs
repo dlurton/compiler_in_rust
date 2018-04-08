@@ -6,7 +6,6 @@ use std::fmt;
 use std::collections::VecDeque;
 
 pub struct CharsReader<'a> {
-    is_at_eof: bool,
     input_chars: Chars<'a>,
     lookahead: VecDeque<char>,
     loc: Option<Location>
@@ -14,7 +13,7 @@ pub struct CharsReader<'a> {
 
 impl <'a> CharsReader<'a> {
     pub fn new(input_chars: Chars<'a>) -> CharsReader<'a> {
-        CharsReader { is_at_eof: false, input_chars, lookahead: VecDeque::new(), loc: None }
+        CharsReader { input_chars, lookahead: VecDeque::new(), loc: None }
     }
 
     pub fn loc(&self) -> Location {
@@ -40,8 +39,9 @@ impl <'a> CharsReader<'a> {
         }
     }
 
-    pub fn has_more(&self) -> bool {
-        !self.is_at_eof
+    pub fn has_more(&mut self) -> bool {
+        self.prime(1);
+        !self.lookahead.is_empty()
     }
 
     pub fn peek(&mut self) -> Option<char> {
@@ -54,10 +54,10 @@ impl <'a> CharsReader<'a> {
     }
 
     fn prime(&mut self, min_chars: u32) {
-        while self.lookahead.len() < min_chars as usize && !self.is_at_eof {
+        while self.lookahead.len() < min_chars as usize {
             match self.input_chars.next() {
                 Some(c) => self.lookahead.push_back(c),
-                None => self.is_at_eof = true
+                None => break
             }
         };
     }

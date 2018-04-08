@@ -23,7 +23,7 @@ fn main() {
                             Ok(expr) => println!("{:#?}", expr),
                             Err(e) => println!("Error: {}", e.kind.message())
                         }
-                        true
+                          true
                     } else {
                         match input[..].trim() {
                             "exit" => false,

@@ -6,6 +6,8 @@ use ast::*;
 use error::*;
 use common::*;
 
+use std::vec::Vec;
+
 // http://en.cppreference.com/w/cpp/language/operator_precedence
 // https://keepcalmandlearnrust.com/2016/08/pratt-parser-in-rust/
 
@@ -27,12 +29,14 @@ pub enum ParseErrorKind {
     ExpectedBinaryOperator(TokenKind),
     InvalidPrefixExpressionTerm(TokenKind),
     UnexpectedEndOfInput,
+    EmptyExpr,
 }
 
 impl ErrorKind for ParseErrorKind {
     fn message(&self) -> String {
         match self {
             &ParseErrorKind::LexerError(ref le) => le.message(),
+            &ParseErrorKind::EmptyExpr => String::from("No expressions were found"),
             &ParseErrorKind::ExpectedBinaryOperator(ref tok) => format!("Expected binary operator but found: {}", tok),
             &ParseErrorKind::InvalidPrefixExpressionTerm(ref tok) => format!("Invalid prefix expression term: {}", tok),
             &ParseErrorKind::UnexpectedEndOfInput => String::from("Unexpected end of input")
@@ -52,12 +56,28 @@ pub struct Parser<'a> {
 }
 
 impl <'a> Parser<'a> {
-    pub fn new(lexer: Lexer<'a>) -> Parser<'a> {
+    pub fn new(lexer: Lexer<'a>) -> Parser {
         Parser { lexer: lexer }
     }
 
     pub fn parse(&mut self) -> ParseResult {
-        self.parse_expr(0)
+        let mut exprs = Vec::new();
+
+        while self.lexer.has_more() {
+            match self.parse_expr(0) {
+                Err(e) => return Err(e),
+                Ok(expr) => exprs.push(Box::new(expr))
+            }
+        }
+        return match exprs.len() {
+                0 => Err(ParseError::new_with_location(ParseErrorKind::EmptyExpr, Location::start())),
+                1 => Ok(*exprs.pop().unwrap()), //Note: .pop() should never return None because .len() == 1
+                _ => Ok({
+                    let first_span = exprs[0].span.clone();
+                    let last_span = exprs[exprs.len() - 1].span.clone();
+                    Expr::new_compound_expr_with_span(exprs, Span::from_locations(first_span.start, last_span.end))
+                })
+            }
     }
 
     fn parse_expr(&mut self, precedence: u32) -> ParseResult {
@@ -119,14 +139,8 @@ impl <'a> Parser<'a> {
                 match parse_result {
                     Err(_) => parse_result,
                     Ok(right) => {
-                        let span = Span::new(left.span.start.clone(), right.span.end.clone());
-                        Ok(Expr::new_with_span(
-                            ExprKind::Binary {
-                                op: binary_op,
-                                left: Box::new(left),
-                                right: Box::new(right)
-                            },
-                            span))
+                        let span = Span::from_locations(left.span.start.clone(), right.span.end.clone());
+                        Ok(Expr::new_binary_with_span(binary_op, left, right, span))
                     },
                 }
             }
@@ -187,7 +201,7 @@ mod tests {
     }
     #[test]
     pub fn parse_identifier() {
-        assert_eq!(Expr::new(ExprKind::VariableRef { name: String::from("abc") }), parse("abc"));
+        assert_eq!(Expr::new_variable_ref(String::from("abc")), parse("abc"));
     }
 
 }

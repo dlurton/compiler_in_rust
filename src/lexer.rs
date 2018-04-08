@@ -98,6 +98,20 @@ impl <'a> Lexer<'a> {
         }
     }
 
+    pub fn has_more(&mut self) -> bool {
+
+        return if !self.lookahead.is_empty() {
+            if let Some(&LexResult::EndOfInput(_)) = self.lookahead.front() {
+                false
+            } else {
+                true
+            }
+        } else {
+            self.eat_white();
+            self.reader.has_more()
+        }
+    }
+
     pub fn next(&mut self) -> LexResult {
         self.prime(1);
 
@@ -166,7 +180,7 @@ impl <'a> Lexer<'a> {
         match kind {
             Some(kind) => {
                 self.reader.next();
-                Some(Token::new(kind, Span::new(self.reader.loc(), self.reader.loc())))
+                Some(Token::new(kind, Span::from_locations(self.reader.loc(), self.reader.loc())))
             }
             None => None
         }
@@ -212,7 +226,7 @@ impl <'a> Lexer<'a> {
 
                         self.reader.next();
                     }
-                    Some((buf, Span::new(start, self.reader.loc())))
+                    Some((buf, Span::from_locations(start, self.reader.loc())))
                 }
             }
         }
@@ -221,10 +235,12 @@ impl <'a> Lexer<'a> {
 
 #[cfg(test)]
 mod tests {
-    fn tok(kind: TokenKind, start_line: u32, start_col: u32, end_line: u32, end_col: u32) -> LexResult {
-        LexResult::Ok(Token::new(kind, Span::new(Location::new(start_line, start_col), Location::new(end_line, end_col))))
-    }
     use super::*;
+
+    fn tok(kind: TokenKind, start_line: u32, start_col: u32, end_line: u32, end_col: u32) -> LexResult {
+        LexResult::Ok(Token::new(kind, Span::from_locations(Location::new(start_line, start_col), Location::new(end_line, end_col))))
+    }
+
     #[test]
     fn lexer_test() {
         let mut l = Lexer::new("  123  \n 456 \nabc\na123 \n+\n-\n*\n/\n%".chars());
@@ -239,6 +255,11 @@ mod tests {
         assert_eq!(tok(TokenKind::BinaryOperator(BinaryOp::Mul), 7, 1, 7, 1), l.next());
         assert_eq!(tok(TokenKind::BinaryOperator(BinaryOp::Div), 8, 1, 8, 1), l.next());
         assert_eq!(tok(TokenKind::BinaryOperator(BinaryOp::Mod), 9, 1, 9, 1), l.next());
+    }
+    #[test]
+    fn lexer_parse_single_identifier() {
+        let mut l = Lexer::new("abc".chars());
+        assert_eq!(tok(TokenKind::Identifier(String::from("abc")), 1, 1, 1, 3), l.next());
     }
 }
 

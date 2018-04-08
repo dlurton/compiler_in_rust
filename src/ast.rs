@@ -3,12 +3,15 @@ use source::Span;
 use value::Value;
 use common::*;
 
+use std::vec::Vec;
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum ExprKind {
     Literal{ value: Value },
     Binary{ op: BinaryOp, left: Box<Expr>, right: Box<Expr> },
     VariableRef { name: String },
-    VariableIndex { index: u32 }
+    VariableIndex { index: u32 },
+    CompoundExpr { exprs: Vec<Box<Expr>>}
 }
 
 #[derive(Debug, Clone)]
@@ -18,10 +21,6 @@ pub struct Expr {
 }
 
 impl Expr {
-    #[cfg(test)]
-    pub fn new(kind: ExprKind) -> Expr {
-        Expr { kind, span: Span::unknown() }
-    }
 
     #[cfg(test)]
     pub fn new_literal(value: Value) -> Expr {
@@ -44,8 +43,8 @@ impl Expr {
     }
 
     #[cfg(test)]
-    pub fn new_variable_ref(name: String, span: Span) -> Expr {
-        Expr::new_variable_ref_with_span(name, span)
+    pub fn new_variable_ref(name: String) -> Expr {
+        Expr::new_variable_ref_with_span(name, Span::unknown() )
     }
     pub fn new_variable_ref_with_span(name: String, span: Span) -> Expr {
         Expr::new_with_span(ExprKind::VariableRef { name }, span)
@@ -59,12 +58,17 @@ impl Expr {
         Expr::new_with_span(ExprKind::VariableIndex{ index }, span)
     }
 
-    pub fn new_with_span(kind: ExprKind, span: Span) -> Expr {
-        Expr { kind, span }
+    #[cfg(test)]
+    pub fn new_compound_expr(exprs: Vec<Box<Expr>>) -> Expr {
+        Expr::new_compound_expr_with_span(exprs, Span::unknown())
     }
 
-    pub fn clone_with(&self, kind: ExprKind) -> Expr {
-        Expr { kind: kind, span: self.span.clone() }
+    pub fn new_compound_expr_with_span(exprs: Vec<Box<Expr>>, span: Span) -> Expr {
+        Expr::new_with_span(ExprKind::CompoundExpr {exprs }, span)
+    }
+
+    fn new_with_span(kind: ExprKind, span: Span) -> Expr {
+        Expr { kind, span }
     }
 }
 

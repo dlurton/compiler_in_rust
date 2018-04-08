@@ -30,6 +30,7 @@ pub fn evaluate(expr: &Expr, env: &Env) -> EvaluateResult {
             )
         },
         //This case indicates that the `resolve_variables` pass was not executed against `expr`
+        //This would be a bug.
         ExprKind::VariableRef { ref name } => panic!("Unresolved variable reference: {:?}", name),
         ExprKind::Binary{ ref op, ref left, ref right } => {
             let left_value = match evaluate(&left, env) {
@@ -48,6 +49,16 @@ pub fn evaluate(expr: &Expr, env: &Env) -> EvaluateResult {
                 (&BinaryOp::Div, Value::Int32(l), Value::Int32(r)) => Value::Int32(l / r),
                 (&BinaryOp::Mod, Value::Int32(l), Value::Int32(r)) => Value::Int32(l % r),
             })
+        }
+        ExprKind::CompoundExpr { ref exprs } => {
+            //Iterate over all expressions except the last, discarding the result.
+            for expr in &exprs[0..exprs.len() - 2] {
+                if let Err(e) = evaluate(expr, env) {
+                    return Err(e)
+                }
+            }
+            //Evalute final expression, which is the result of the CompoundExpr
+            evaluate(&exprs[exprs.len() - 1], env)
         }
     }
 }

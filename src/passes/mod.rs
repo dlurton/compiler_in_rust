@@ -52,11 +52,18 @@ fn recurse_clone<TErrorKind: ErrorKind>(expr: &Expr, node_handler: &Fn(&Expr) ->
                     Ok(expr) => expr
                 };
 
-                Ok(expr.clone_with(ExprKind::Binary {
-                    op: (*op).clone(),
-                    left: Box::new(new_left),
-                    right: Box::new(new_right)
-                }))
+                Ok(Expr::new_binary_with_span((*op).clone(), new_left, new_right, expr.span))
+            },
+
+            &ExprKind::CompoundExpr {ref exprs } => {
+                let mut new_exprs = Vec::new();
+                for e in exprs {
+                    match recurse_clone(e, node_handler) {
+                        Err(e) => return Err(e),
+                        Ok(new_expr) => new_exprs.push(Box::new(new_expr))
+                    }
+                }
+                Ok(Expr::new_compound_expr_with_span(new_exprs, expr.span))
             }
         }
     }
